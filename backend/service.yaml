@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: medical-image-segmentation
+spec:
+  type: LoadBalancer
+  selector:
+    app: medical-image-segmentation
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 5000

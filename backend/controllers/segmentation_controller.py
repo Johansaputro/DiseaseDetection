@@ -4,7 +4,7 @@ import threading
 import traceback
 from services.segmentation_service import SegmentationService
 from werkzeug.utils import secure_filename
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, make_response
 
 class SegmentationController:
     def __init__(self, app):
@@ -35,9 +35,12 @@ class SegmentationController:
             file.save(self.save_path)
             self.app.logger.info('File Received')
 
-            self.result_dir = self.segmentation_service.predict_nifti(self.save_path)
+            self.result_dir, url_list = self.segmentation_service.predict_nifti(self.save_path, filename)
 
-            return send_file(self.result_dir, mimetype='application/nifti', as_attachment=True, download_name="result.nii.gz")
+            response = make_response(send_file(self.result_dir, mimetype='application/nifti', as_attachment=True, download_name="result.nii.gz"))
+            response.headers['url_list'] = url_list
+
+            return response
 
         except Exception as e:
             self.app.logger.error(traceback.format_exc())

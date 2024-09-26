@@ -22,7 +22,10 @@ const NiftiUploader = () => {
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
-        return response.blob();
+        // return response.blob();
+        console.log(response)
+        console.log(response.headers.get('url_list'))
+        return response.blob()
       })
       .then(data => {
         // Create a download link for the blob object
