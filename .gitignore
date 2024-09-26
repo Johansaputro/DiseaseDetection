@@ -14,6 +14,9 @@ node_modules
 # properties
 .env
 
+# model
+*.h5
+
 # misc
 .DS_Store
 .env.local
@@ -33,6 +36,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+logs/
 bin/
 build/
 develop-eggs/

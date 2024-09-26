@@ -1,0 +1,34 @@
+pipeline {
+  agent any
+
+  environment {
+    PROJECT_ID = 'your-project-id'
+    IMAGE_NAME = 'medical-image-segmentation'
+    IMAGE_TAG = 'latest'
+    CLUSTER_NAME = 'your-cluster-name'
+    KUBECONFIG = '/root/.kube/config'
+  }
+
+  stages {
+    stage('Build') {
+      steps {
+        sh "docker build -t gcr.io/${PROJECT_ID}/${IMAGE_NAME}:${IMAGE_TAG} ."
+        sh "docker push gcr.io/${PROJECT_ID}/${IMAGE_NAME}:${IMAGE_TAG}"
+      }
+    }
+
+    stage('Test') {
+      steps {
+        sh 'docker run gcr.io/${PROJECT_ID}/${IMAGE_NAME}:${IMAGE_TAG} python -m unittest discover -s tests -p "*_test.py"'
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        sh "gcloud container clusters get-credentials ${CLUSTER_NAME} --zone=your-zone --project=${PROJECT_ID}"
+        sh "kubectl apply -f k8s/deployment.yaml"
+        sh "kubectl apply -f k8s/service.yaml"
+      }
+    }
+  }
+}

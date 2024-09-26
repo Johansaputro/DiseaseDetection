@@ -4,7 +4,7 @@ import threading
 import traceback
 from services.segmentation_service import SegmentationService
 from werkzeug.utils import secure_filename
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, make_response
 
 class SegmentationController:
     def __init__(self, app):
@@ -12,6 +12,7 @@ class SegmentationController:
         self.segmentation_service = SegmentationService()
         self.blueprint = Blueprint('segmentation_controller', __name__)
         self.blueprint.add_url_rule('/predict', view_func=self.predict, methods=['POST'])
+        self.blueprint.add_url_rule('/predict/mrcnn', view_func=self.predict_mrcnn, methods=['POST'])
         self.blueprint.after_request(self.file_cleanup_thread)
 
     def predict(self):
@@ -35,9 +36,44 @@ class SegmentationController:
             file.save(self.save_path)
             self.app.logger.info('File Received')
 
-            self.result_dir = self.segmentation_service.predict_nifti(self.save_path)
+            self.result_dir, url_list = self.segmentation_service.predict_nifti(self.save_path, filename)
 
-            return send_file(self.result_dir, mimetype='application/nifti', as_attachment=True, download_name="result.nii.gz")
+            response = make_response(send_file(self.result_dir, mimetype='application/nifti', as_attachment=True, download_name="result.nii.gz"))
+            response.headers['url_list'] = url_list
+
+            return response
+
+        except Exception as e:
+            self.app.logger.error(traceback.format_exc())
+            return jsonify({'error': 'Failed due to {}'.format(e)}), 500
+        
+    def predict_mrcnn(self):
+        self.app.logger.info('predict MRCNN. upload file request received')
+
+        if 'file' not in request.files:
+            self.app.logger.error('No File Uploaded')
+            return jsonify({'error': 'No file uploaded.'}), 400
+
+        file = request.files['file']
+
+        # Save the file to disk
+        try:
+            filename = secure_filename(file.filename)
+            if not filename.endswith('.jpg') and not filename.endswith('.jpeg') and not filename.endswith('.png'):
+                self.app.logger.info(filename)
+                self.app.logger.error('Not a jpg/jpeg/png file')
+                return jsonify({'error': 'Only jpg/jpeg/png files are supported.'}), 400
+
+            self.save_path = os.path.abspath(os.path.join(self.app.config['UPLOAD_FOLDER'], filename))
+            
+            file.save(self.save_path)
+            self.app.logger.info('File Received')
+
+            url, sizes = self.segmentation_service.predict_mrcnn(self.save_path, filename)
+            response_dict = {'sizes': sizes, 'data': url}
+            response = jsonify(response_dict)
+
+            return response
 
         except Exception as e:
             self.app.logger.error(traceback.format_exc())

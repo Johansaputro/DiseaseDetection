@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medical-image-segmentation
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: medical-image-segmentation
+  template:
+    metadata:
+      labels:
+        app: medical-image-segmentation
+    spec:
+      containers:
+      - name: medical-image-segmentation
+        image: gcr.io/<project-id>/<image-name>:<image-tag>
+        ports:
+        - containerPort: 5000
+        env:
+        - name: PORT
+          value: "5000"
+        - name: ENVIRONMENT
+          value: "production"
